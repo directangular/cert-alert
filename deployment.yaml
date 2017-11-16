@@ -1,0 +1,31 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: cert-alert-deployment
+  labels:
+    app: cert-alert
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cert-alert
+  template:
+    metadata:
+      labels:
+        app: cert-alert
+    spec:
+      containers:
+      - name: cert-alert
+        image: directangular/cert-alert
+        command: ["python"]
+        args: ["-u", "cert_alert.py", "/config/hosts.txt"]
+        volumeMounts:
+        - mountPath: /config
+          name: config
+      volumes:
+      - name: config
+        configMap:
+          name: cert-alert-config
+          items:
+          - key: hosts.txt
+            path: hosts.txt
