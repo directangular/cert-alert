@@ -25,6 +25,8 @@ def ssl_expiry_datetime(hostname):
         conn.connect((hostname, 443))
     except socket.gaierror:
         return None
+    except socket.timeout:
+        return None
     ssl_info = conn.getpeercert()
     # parse the string from the certificate into a Python datetime object
     return datetime.datetime.strptime(ssl_info['notAfter'], ssl_date_fmt)
