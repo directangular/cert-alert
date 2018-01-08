@@ -17,6 +17,7 @@ spec:
       containers:
       - name: cert-alert
         image: directangular/cert-alert
+        imagePullPolicy: Always
         command: ["python"]
         args: ["-u", "cert_alert.py", "/config/hosts.txt"]
         volumeMounts:
