@@ -5,5 +5,5 @@ decorator==4.1.2
 idna==2.6
 requests==2.18.4
 simplejson==3.12.0
-urllib3==1.22
+urllib3==1.24.2
 virtualenv==15.1.0
