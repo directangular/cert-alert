@@ -14,6 +14,11 @@ spec:
       labels:
         app: cert-alert
     spec:
+      tolerations:
+      - key: "spotty"
+        value: "true"
+        operator: "Equal"
+        effect: "NoSchedule"
       containers:
       - name: cert-alert
         image: directangular/cert-alert
