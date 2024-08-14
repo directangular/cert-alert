@@ -74,7 +74,11 @@ def init_ddog():
         logging.error("Failed to get hostname from AWS: %s", e)
         hostname_aws = "localhost"
 
-    ddog.initialize(statsd_host=hostname_aws)
+    kwargs = {
+        "statsd_host": hostname_aws,
+    }
+    print(f"Initializing ddog with {kwargs}")
+    ddog.initialize(**kwargs)
 
 
 # Main function to handle workflow
