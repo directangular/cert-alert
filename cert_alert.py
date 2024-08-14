@@ -67,9 +67,18 @@ def check_hosts(hostsfilename):
 
 # Initialize Datadog configuration
 def init_ddog():
+    token_url = "http://169.254.169.254/latest/api/token"
     hostname_url = "http://169.254.169.254/latest/meta-data/hostname"
     try:
-        hostname_aws = requests.get(hostname_url, timeout=3).text
+        token_headers = {"X-aws-ec2-metadata-token-ttl-seconds": "600"}
+        token_response = requests.put(token_url, headers=token_headers, timeout=3)
+        token_response.raise_for_status()
+
+        hostname_headers = {"X-aws-ec2-metadata-token": token_response.text}
+        hostname_response = requests.get(hostname_url, headers=hostname_headers, timeout=3)
+        hostname_response.raise_for_status()
+
+        hostname_aws = hostname_response.text
     except Exception as e:
         logging.error("Failed to get hostname from AWS: %s", e)
         hostname_aws = "localhost"
