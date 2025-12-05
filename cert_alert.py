@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 import signal
 import socket
 import ssl
@@ -65,8 +66,7 @@ def check_hosts(hostsfilename):
         )
 
 
-# Initialize Datadog configuration
-def init_ddog():
+def get_hostname_aws() -> str:
     token_url = "http://169.254.169.254/latest/api/token"
     hostname_url = "http://169.254.169.254/latest/meta-data/hostname"
     try:
@@ -78,13 +78,24 @@ def init_ddog():
         hostname_response = requests.get(hostname_url, headers=hostname_headers, timeout=3)
         hostname_response.raise_for_status()
 
-        hostname_aws = hostname_response.text
+        return hostname_response.text
     except Exception as e:
-        logging.error("Failed to get hostname from AWS: %s", e)
-        hostname_aws = "localhost"
+        raise RuntimeError("Failed to get hostname from AWS: %s", e)
+
+
+# Initialize Datadog configuration
+def init_ddog():
+    doghost = os.getenv("DOGSTATSD_HOST")
+    if not doghost:
+        raise RuntimeError("Missing required env var: DOGSTATSD_HOST")
+
+    if doghost == "AWS_AUTODISCOVER_INSTANCE":
+        statsd_host = get_hostname_aws()
+    else:
+        statsd_host = doghost
 
     kwargs = {
-        "statsd_host": hostname_aws,
+        "statsd_host": statsd_host,
     }
     print(f"Initializing ddog with {kwargs}")
     ddog.initialize(**kwargs)

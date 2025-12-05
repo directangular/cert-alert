@@ -8,60 +8,76 @@ currently no built-in alerting.
 
 # Installation
 
-## Step 1: Create a ConfigMap with your hosts
+## Step 1: Create kustomize and hosts.txt files
 
-The list of hosts to check is controlled by a `ConfigMap`, which you'll
-need to create first with the following command:
-
-```shell
-kubectl create configmap cert-alert-config --from-file=hosts.txt
-```
-
-Your `hosts.txt` file should be a flat list of hostnames.  For example:
+Create `./overlay/kustomization.yaml` in this repo with content:
 
 ```
-beta.popitup.com
-popitup.com
-scaryphotobooth.com
-stopandpayus.com
-www.popitup.com
-www.scaryphotobooth.com
-www.stopandpayus.com
+resources:
+  - ../deploy
+
+configMapGenerator:
+  - name: cert-alert-config
+    files:
+      - hosts.txt
 ```
 
-## Step 2: Create the deployment
-
-Once your `ConfigMap` is created you can create the deployment:
+and `./overlay/hosts.txt` with your hosts listed, one per line:
 
 ```
-kubectl apply -f deployment.yaml
+example.com
+mydomain.example.com
 ```
 
-And that's it!  Logging will start immediately.
+## Step 2: Customize dogstatsd hostname
 
-# Updating host configuration
+`cert_alert` sends metrics to DataDog. The metric is named
+`ssl_expiries.days_to_expiry` and is tagged with the hostname being checked. This
+metric can be used to set up a monitor so that you be alerted when you have a
+certificate approaching its expiration date.
 
-If you need to update the list of hosts in the future you can just delete
-and re-create the `ConfigMap` and deployment:
-
-```shell
-kubectl delete deployment cert-alert-deployment
-kubectl delete configmap cert-alert-config
-kubectl create configmap cert-alert-config --from-file=hosts.txt
-kubectl apply -f deployment.yaml
-```
-
-# DataDog integration
-
-By default, `cert_alert.py` tries to send metrics to DataDog.  The metric
-is named `ssl_expiries.days_to_expiry` and is tagged with the hostname
-being checked.  This metric can be used to set up a monitor so that you be
-alerted when you have a certificate approaching its expiration date.
-
-Currently it's assumed that DataDog is running as a `DaemonSet` in your
-cluster.  That way, the endpoint can be auto-discovered by querying the
-[AWS instance metadata
+The dogstatsd hostname can either be provided manually, or can be auto-discovered
+from the [AWS instance metadata
 API](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html#instancedata-data-retrieval).
-If that doesn't work, it will use `localhost`.
 
-PRs welcome if this approach doesn't work in your environment :).
+### Manually set dogstatsd hostname
+
+You can manually specify the dogstatsd hostname by adding the following item to
+`configMapGenerator` in `./overlay/kustomization.yaml`:
+
+```
+configMapGenerator:
+  ...
+  - name: cert-alert-env
+    literals:
+      - DOGSTATSD_HOST=statsd-exporter.monitoring.svc.cluster.local
+```
+
+The above example assumes `prom/statsd-exporter` is running as a service named
+`statsd-exporter` in the `monitoring` namespace.
+
+### AWS DaemonSet
+
+You can also set `DOGSTATSD_HOST` to the special value `"AWS_AUTODISCOVER_INSTANCE"`,
+which will cause `cert_alert` to discover the hostname of the node where the workload
+is running. This works when you have DataDog running as a `DaemonSet` in your cluster
+(i.e. it's available on every node).
+
+Example using AWS auto-discovery:
+
+```
+configMapGenerator:
+  ...
+  - name: cert-alert-env
+    literals:
+      - DOGSTATSD_HOST=AWS_AUTODISCOVER_INSTANCE
+```
+
+## Step 3: Deploy
+
+Once you've created `overlay/kustomization.yaml` as per the above instructions, you
+can deploy `cert_alert` with:
+
+```
+kubectl apply -k overlay/
+```

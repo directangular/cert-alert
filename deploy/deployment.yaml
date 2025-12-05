@@ -28,6 +28,12 @@ spec:
         volumeMounts:
         - mountPath: /config
           name: config
+        env:
+        - name: DOGSTATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: cert-alert-env
+              key: DOGSTATSD_HOST
       volumes:
       - name: config
         configMap:
