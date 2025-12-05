@@ -23,6 +23,9 @@ logging.basicConfig(
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 # Check the SSL certificate expiration for a given hostname
 def ssl_expiry_datetime(hostname):
     ssl_date_fmt = r"%b %d %H:%M:%S %Y %Z"
@@ -38,11 +41,11 @@ def ssl_expiry_datetime(hostname):
         conn.connect((hostname, 443))
         ssl_info = conn.getpeercert()
         if ssl_info is None:
-            logging.warning(f"No peer cert from {hostname}")
+            logger.warning(f"No peer cert from {hostname}")
             return
         return datetime.datetime.strptime(ssl_info["notAfter"], ssl_date_fmt)
     except Exception as e:
-        logging.warning("Could not connect to %s. Exception: %s", hostname, e)
+        logger.warning("Could not connect to %s. Exception: %s", hostname, e)
         return None
     finally:
         conn.close()
@@ -57,10 +60,10 @@ def check_hosts(hostsfilename):
     for host in hosts:
         exp = ssl_expiry_datetime(host)
         if exp is None:
-            logging.info("Couldn't connect to %s. Skipping.", host)
+            logger.info("Couldn't connect to %s. Skipping.", host)
             continue
         days_to_expiry = (exp - now).days
-        logging.info("%s expires in %s days", host, days_to_expiry)
+        logger.info("%s expires in %s days", host, days_to_expiry)
         ddog.statsd.gauge(
             "ssl_expiries.days_to_expiry", days_to_expiry, tags=["host:" + host]
         )
@@ -90,7 +93,7 @@ def init_ddog():
         raise RuntimeError("Missing required env var: DOGSTATSD_HOST")
 
     if doghost == "AWS_AUTODISCOVER_INSTANCE":
-        print("Attempting AWS hostname auto-discovery")
+        logger.info("Attempting AWS hostname auto-discovery")
         statsd_host = get_hostname_aws()
     else:
         statsd_host = doghost
@@ -98,21 +101,21 @@ def init_ddog():
     kwargs = {
         "statsd_host": statsd_host,
     }
-    print(f"Initializing ddog with {kwargs}")
+    logger.info(f"Initializing ddog with {kwargs}")
     ddog.initialize(**kwargs)
 
 
 # Main function to handle workflow
 def main():
     if len(sys.argv) != 2:
-        logging.error("Usage: cert_alert.py <hostsfile>")
+        logger.error("Usage: cert_alert.py <hostsfile>")
         sys.exit(1)
 
     signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(0))
     init_ddog()
 
     hfname = sys.argv[1]
-    logging.info("Checking expiration dates on certs for hosts listed in %s", hfname)
+    logger.info("Checking expiration dates on certs for hosts listed in %s", hfname)
 
     while True:
         check_hosts(hfname)
