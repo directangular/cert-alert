@@ -96,6 +96,7 @@ def init_ddog():
         logger.info("Attempting AWS hostname auto-discovery")
         statsd_host = get_hostname_aws()
     else:
+        logger.info("Using manually specified dogstatsd host: %s", doghost)
         statsd_host = doghost
 
     kwargs = {
