@@ -21,7 +21,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: cert-alert
-        image: directangular/cert-alert
+        image: directangular/cert-alert:v2
         imagePullPolicy: Always
         command: ["python"]
         args: ["-u", "cert_alert.py", "/config/hosts.txt"]
