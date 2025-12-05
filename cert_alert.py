@@ -90,6 +90,7 @@ def init_ddog():
         raise RuntimeError("Missing required env var: DOGSTATSD_HOST")
 
     if doghost == "AWS_AUTODISCOVER_INSTANCE":
+        print("Attempting AWS hostname auto-discovery")
         statsd_host = get_hostname_aws()
     else:
         statsd_host = doghost
